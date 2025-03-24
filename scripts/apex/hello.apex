@@ -5,6 +5,7 @@
 // You can also execute the entire file by running the command:
 //     SFDX: Execute Anonymous Apex with Editor Contents
 
-string tempvar = 'Enter_your_name_here';
-System.debug('Hello World!');
-System.debug('My name is ' + tempvar);
+ExchangeRateService.getLatestRates();
+
+// Datetime dt = ExchangeRateWrapper.processDateTimeString('Sat, 22 Mar 2025 00:00:01 +0000');
+// System.debug(dt);
