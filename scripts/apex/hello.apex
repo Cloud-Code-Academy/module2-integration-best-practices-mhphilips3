@@ -5,7 +5,12 @@
 // You can also execute the entire file by running the command:
 //     SFDX: Execute Anonymous Apex with Editor Contents
 
-ExchangeRateService.getLatestRates();
+//ExchangeRateService.getLatestRates();
 
 // Datetime dt = ExchangeRateWrapper.processDateTimeString('Sat, 22 Mar 2025 00:00:01 +0000');
 // System.debug(dt);
+
+//System.schedule('Manual_Run_ExchangeRateScheduler', '0 0 1 * * ?', new ExchangeRateScheduler());
+
+ExchangeRateScheduler scheduler = new ExchangeRateScheduler();
+scheduler.execute(null);

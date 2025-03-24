@@ -10,14 +10,18 @@ global class ExchangeRateScheduler implements Schedulable{
      */
     global void execute(SchedulableContext sc) {
         // TODO: Implement the method to update exchange rates
+        Integration_Log__c logEntry = new Integration_Log__c();
+        logEntry.Integration_Name__c = 'ExchangeRateAPI';
+        logEntry.Run_Timestamp__c = Datetime.now();
         try{
             List<Exchange_Rate__c> updatedRates = ExchangeRateService.updateExchangeRates();
+            logEntry.Status__c = 'Success';
+            logEntry.Records_Processed__C = updatedRates.size();
         } catch (Exception e){
-            System.debug('Callout Failed: ' + e.getMessage());
+            logEntry.Status__c = 'Error';
+            logEntry.Message__c = 'Error: ' + e.getMessage();
         }
-        // 1. Call ExchangeRateService.updateExchangeRates()
-        // 2. Add error handling
-        // 3. Consider adding logging if available
+        insert logEntry;
     }
 
     /**
