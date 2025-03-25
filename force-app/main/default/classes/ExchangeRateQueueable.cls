@@ -3,7 +3,10 @@
 * This class is enqueued by a scheduled job since callouts are not allowed directly from scheduled Apex.
 */
 public with sharing class ExchangeRateQueueable implements Queueable, Database.AllowsCallouts {
-    public ExchangeRateQueueable() {
+    private List<Base_Currency_Config__mdt> configs;
+    
+    public ExchangeRateQueueable(List<Base_Currency_Config__mdt> configs) {
+        this.configs = configs;
     }
 
     // execute method for queueable
@@ -13,17 +16,47 @@ public with sharing class ExchangeRateQueueable implements Queueable, Database.A
         Integration_Log__c logEntry = new Integration_Log__c();
         logEntry.Integration_Name__c = 'ExchangeRateAPI';
         logEntry.Run_Timestamp__c = Datetime.now();
+        List<String> messageList = new List<String>{'Summary of "Update Exchange Rates" Callout Run:'};
+        logEntry.Records_Processed__c = 0;
+        Boolean successRecorded = false;
+        Boolean errorRecorded = false;
+        Integer count = 0;
+        // Create list to hold exchange rates to upsert at the end of all callouts.
+        List<Exchange_Rate__c> exRatesToUpsert = new List<Exchange_Rate__c>();
+        // Iterate through base currency configs to pull back respective exchange rates
+        for (Base_Currency_Config__mdt config : configs){
+            count ++;
+            String bc = config.Base_Currency__c;
 
-        try{
-            // Fetch and process exchange rate data
-            List<Exchange_Rate__c> updatedRates = ExchangeRateService.updateExchangeRates();
-            // Log successful outcomes
-            logEntry.Status__c = 'Success';
-            logEntry.Records_Processed__C = updatedRates.size();
-        } catch (Exception e){
-            // Log any errors encountered
+            try{
+                // Fetch and process exchange rate data
+                List<Exchange_Rate__c> updatedRates = ExchangeRateService.updateExchangeRates(bc);
+
+                successRecorded = true;
+                logEntry.Records_Processed__c += updatedRates.size();
+                messageList.add(count + '.  Successfully updated ' + updatedRates.size() + ' ' + bc + ' records.');
+                exRatesToUpsert.addAll(updatedRates);
+            } catch (Exception e){
+                // Log any errors encountered
+                errorRecorded = true;
+                messageList.add(count + '.  Error updating ' + bc + ' records. Message: ' + e.getMessage());                
+            }
+        }
+        // Upsert collected Exchange Rate Records
+        try {
+            upsert exRatesToUpsert External_Id__c;
+        } catch (Exception dmlException){
+            messageList.add('DML Error: ' + dmlException.getMessage());
+        }
+
+        // Finish constructing, then insert Log Entry Record
+        logEntry.Message__c = String.join(messageList, '\n');
+        if (successRecorded && errorRecorded){
+            logEntry.Status__c = 'Partial Success';
+        } else if (successRecorded){
+            logEntry.Status__c = 'Success';            
+        } else{
             logEntry.Status__c = 'Error';
-            logEntry.Message__c = 'Error: ' + e.getMessage();
         }
         insert logEntry;
     }

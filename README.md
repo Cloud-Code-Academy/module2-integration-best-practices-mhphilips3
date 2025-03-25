@@ -1,3 +1,13 @@
+Malcolm's Comments:
+Just some notes to explain what I've done.  For the most part, I followed the outline described in this file and the existing, stubbed classes.  A couple variations:
+1. ## Integration_Log__c
+I created this Custom Object to hold records of integration success/failures.  Every time the system runs, a record is created to hold the data.
+2. ## ExchangeRateQueueable.cls
+I found out (amazingly, through my Integration Log) that my scheduled job was firing, but erroring because "Callout from scheduled Apex not supported."  I implemented this class, instantiated and enqueued from the scheduler class, to handle the callout.
+3. Used External Credential/Principal/Named Credential combination for authentication.
+
+
+
 # Cloud Code Academy - Integration Developer Program
 ## Lesson 2: Exchange Rate API Integration - Best Practices
 

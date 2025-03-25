@@ -7,18 +7,18 @@ public class ExchangeRateService {
     // The named credential to use for the callout
     private static final String NAMED_CREDENTIAL = 'ExchangeRate_API';    
     // The base currency to use for exchange rates
-    private static final String BASE_CURRENCY = 'USD';
+    //private static final String BASE_CURRENCY = 'USD';
 
     /**
      * @description Makes a callout to the Exchange Rate API to get the latest exchange rates
      * @return ExchangeRateWrapper containing the response data
      */
-    public static ExchangeRateWrapper getLatestRates() {
+    public static ExchangeRateWrapper getLatestRates(String baseCurrency) {
         // TODO: Implement the method to make a callout to the Exchange Rate API
         Http http = new Http();
         HttpRequest request = new HttpRequest();
         request.setMethod('GET');
-        request.setEndpoint('callout:' + NAMED_CREDENTIAL +'/latest/' + BASE_CURRENCY);
+        request.setEndpoint('callout:' + NAMED_CREDENTIAL +'/latest/' + baseCurrency);
         HttpResponse response = http.send(request);
 
         if(response.getStatusCode() >= 200 && response.getStatusCode() < 300){
@@ -43,7 +43,6 @@ public class ExchangeRateService {
         }
         
         List<Exchange_Rate__c> exRateList = rateData.toExchangeRates();
-        upsert exRateList External_Id__c;
         return exRateList;
     }
     
@@ -51,10 +50,10 @@ public class ExchangeRateService {
      * @description Combines getting and processing rates into a single operation
      * @return List<Exchange_Rate__c> The list of records created or updated
      */
-    public static List<Exchange_Rate__c> updateExchangeRates() {
+    public static List<Exchange_Rate__c> updateExchangeRates(String baseCurrency) {
         // TODO: Implement the method to get and process rates
         // 1. Call getLatestRates to retrieve the data
-        ExchangeRateWrapper rateData = getLatestRates();
+        ExchangeRateWrapper rateData = getLatestRates(baseCurrency);
         // 2. Call processRates to create/update records
         List<Exchange_Rate__c> exRateList = processRates(rateData);
         // 3. Return the processed records        
