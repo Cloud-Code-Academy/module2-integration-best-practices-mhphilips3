@@ -19,12 +19,14 @@ public with sharing class ExchangeRateQueueable implements Queueable, Database.A
             List<Exchange_Rate__c> updatedRates = ExchangeRateService.updateExchangeRates();
             // Log successful outcomes
             logEntry.Status__c = 'Success';
-            logEntry.Records_Processed__C = updatedRates.size();
+            logEntry.Records_Processed__c = updatedRates.size();
+
         } catch (Exception e){
             // Log any errors encountered
             logEntry.Status__c = 'Error';
             logEntry.Message__c = 'Error: ' + e.getMessage();
         }
+        
         insert logEntry;
     }
 }

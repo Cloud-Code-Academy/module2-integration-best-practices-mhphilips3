@@ -24,6 +24,7 @@ global class ExchangeRateScheduler implements Schedulable{
         for(CronTrigger ct : [SELECT Id FROM CronTrigger WHERE CronJobDetail.Name = :jobName]){
             System.abortJob(ct.Id);  
         }
+        
         System.schedule(jobName, cronExpression, new ExchangeRateScheduler());
     }
 }

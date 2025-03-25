@@ -19,12 +19,13 @@ public class ExchangeRateWrapper {
      * @return List<Exchange_Rate__c> The list of exchange rate records
      */
     public List<Exchange_Rate__c> toExchangeRates() {
-        // TODO: Implement the method to convert the wrapper data to Exchange_Rate__c records
         // 1. Create a list to hold the Exchange_Rate__c records
         List<Exchange_Rate__c> exRateList = new List<Exchange_Rate__c>();
-        // 2. Iterate through the rates map
-        // 3. For each rate, create an Exchange_Rate__c record
+
+        // convert the UNIX timestamp to Apex Datetime data type.
         Datetime lastUpdate = Datetime.newInstance(Long.valueOf(time_last_update_unix)*1000);
+
+        // 2. Iterate through the rates map and create Exchange_Rate__c records
         for (String targetCurrency : conversion_rates.keySet()){
             Exchange_Rate__c newExRate = new Exchange_Rate__c();
             newExRate.Base_Currency__c = base_code;
@@ -36,6 +37,7 @@ public class ExchangeRateWrapper {
 
             exRateList.add(newExRate);
         }
+
         // 4. Return the list of records        
         return exRateList;
     }
@@ -46,8 +48,7 @@ public class ExchangeRateWrapper {
      * @return ExchangeRateWrapper The parsed wrapper instance
      */
     public static ExchangeRateWrapper parse(String jsonResponse) {
-        // TODO: Implement the method to parse the JSON response    
-        
+        // TODO: Implement the method to parse the JSON response        
         return (ExchangeRateWrapper)JSON.deserialize(jsonResponse, ExchangeRateWrapper.class);
     }
 }

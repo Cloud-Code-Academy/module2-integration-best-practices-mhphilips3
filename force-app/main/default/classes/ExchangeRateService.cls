@@ -25,7 +25,6 @@ public class ExchangeRateService {
             ExchangeRateWrapper rateData = ExchangeRateWrapper.parse(response.getBody());
             // System.debug(rateData);
             return rateData;
-
         } else {
             throw new CalloutException('Error receiving exchange rates.  Status code: ' + response.getStatusCode());
         }        
@@ -55,8 +54,10 @@ public class ExchangeRateService {
         // TODO: Implement the method to get and process rates
         // 1. Call getLatestRates to retrieve the data
         ExchangeRateWrapper rateData = getLatestRates();
+
         // 2. Call processRates to create/update records
         List<Exchange_Rate__c> exRateList = processRates(rateData);
+        
         // 3. Return the processed records        
         return exRateList;
     }
