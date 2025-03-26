@@ -5,19 +5,29 @@
 public class ExchangeRateService {
     
     // The named credential to use for the callout
-    private static final String NAMED_CREDENTIAL = 'ExchangeRate_API';
-    
+    private static final String NAMED_CREDENTIAL = 'ExchangeRate_API';    
     // The base currency to use for exchange rates
     private static final String BASE_CURRENCY = 'USD';
-    
+
     /**
      * @description Makes a callout to the Exchange Rate API to get the latest exchange rates
      * @return ExchangeRateWrapper containing the response data
      */
-    public static ExchangeRateWrapper getLatestRates() {
+    public static ExchangeRateWrapper getLatestRates(String baseCurrency) {
         // TODO: Implement the method to make a callout to the Exchange Rate API
-        
-        return null; // Replace with actual implementation
+        Http http = new Http();
+        HttpRequest request = new HttpRequest();
+        request.setMethod('GET');
+        request.setEndpoint('callout:' + NAMED_CREDENTIAL +'/latest/' + baseCurrency);
+        HttpResponse response = http.send(request);
+
+        if(response.getStatusCode() >= 200 && response.getStatusCode() < 300){
+            ExchangeRateWrapper rateData = ExchangeRateWrapper.parse(response.getBody());
+            // System.debug(rateData);
+            return rateData;
+        } else {
+            throw new CalloutException('Error receiving exchange rates.  Status code: ' + response.getStatusCode());
+        }        
     }
     
     /**
@@ -27,20 +37,46 @@ public class ExchangeRateService {
      */
     public static List<Exchange_Rate__c> processRates(ExchangeRateWrapper rateData) {
         // TODO: Implement the method to process rates and create/update records
+        if (rateData == null){
+            return new List<Exchange_Rate__c>();
+        }
         
-        return null; // Replace with actual implementation
+        List<Exchange_Rate__c> exRateList = rateData.toExchangeRates();
+
+        // ONLY PERFORM DML DURING A TEST, else leave DML to the 
+        if(Test.isRunningTest()){
+            upsert exRateList External_Id__c;
+        }
+        
+        return exRateList;
     }
     
     /**
      * @description Combines getting and processing rates into a single operation
      * @return List<Exchange_Rate__c> The list of records created or updated
      */
-    public static List<Exchange_Rate__c> updateExchangeRates() {
+    public static List<Exchange_Rate__c> updateExchangeRates(String baseCurrency) {
         // TODO: Implement the method to get and process rates
         // 1. Call getLatestRates to retrieve the data
+        ExchangeRateWrapper rateData = getLatestRates(baseCurrency);
         // 2. Call processRates to create/update records
-        // 3. Return the processed records
+        List<Exchange_Rate__c> exRateList = processRates(rateData);
         
-        return null; // Replace with actual implementation
+        // 3. Return the processed records        
+        return exRateList;
+    }
+
+    /**
+     * THE FOLLOWING METHODS ARE USED ONLY FOR TESTING PURPOSES
+     * Converts no argument to use the upgraded code 
+     * @return ExchangeRateWrapper containing the response data
+     */
+    public static List<Exchange_Rate__c> updateExchangeRates(){
+        return updateExchangeRates(BASE_CURRENCY);
+    }
+
+    public static ExchangeRateWrapper getLatestRates() {
+        return getLatestRates(BASE_CURRENCY);
+        
     }
 }

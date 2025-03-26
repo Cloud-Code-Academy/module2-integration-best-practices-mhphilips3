@@ -1,3 +1,36 @@
+Malcolm's Comments:
+Just some notes to explain what I've done.  For the most part, I followed the outline described in this file and the existing, stubbed classes.  A couple variations:
+
+## 1. Integration_Log__c
+I created this Custom Object to hold records of integration success/failures.  Every time the system runs, a record is created to hold the data.
+
+## 2. ExchangeRateQueueable.cls
+I found out (amazingly, through my Integration Log) that my scheduled job was firing, but erroring because "Callout from scheduled Apex not supported."  I implemented this class, instantiated and enqueued from the scheduler class, to handle the callout.
+
+## 3. Used External Credential/Principal/Named Credential combination for authentication.
+
+## 4. Added support for multiple base currencies
+   - This is all done in the feature branch and not pulled into the main, which will violate the tests 
+   - Added a Custom Metadata Type to give administrator the ability to change currencies and include multiple currencies
+   - Refactored Queueable class, Scheduler class, and service class to accomodate this change.  Works great and logs the multiple callouts all in one Integration Log!!!
+
+## 5. Refactored most classes to Pass tests
+   - This includes overloading constructors and methods to able to be called by the Test Classes as written.
+   - Includes an if-else block in the Queueable class that routes the code either to the dynamic path or hardcoded path depending on if this is coming from the scheduled job or test class.
+   - Includes a conditional in the ExchangeRateService class to either perform the DML (if it this is in the Test context) or not, if this is from schedulable.
+
+## 6. Work to Reduce/Eliminate warnings (PMD Best Practices)
+Have done a number of things to reduce the PMD warnings received in GitHub's automation
+   - First, I've told GitHub to ignore the three errors related to using snake case rather than camel case for the Wrapper property variables, as this is an unavoidable reality in deserializing straight to the Wrapper class.
+   - Added a Finalizer to the queueable to follow best practices.  I don't think this was necessary and all that is in the class is logging an unknown/unhandled error if nothing logs within the execute method.
+   - Added redundant property instantiation to avoid PMD warning.
+   - To handle the complexity warnings in the Queueable's execute method:
+      - Broke out parts of the queueable to keep the execute method simpler (PMD was complaining it was too complex).
+      - Added a ProcessingResult wrapper to keep everything in one place — list of rates, messages, log record, etc.
+   - Added a limit to the SOQL query that fetches metadata records to address PMD's warning about queries without limits.  This is good here anyway, as there is a limit to number of Queueable Jobs per transaction.  For the purpose of this developer org (which can be limited in storage), I arbitrarily set that for 5.
+
+
+
 # Cloud Code Academy - Integration Developer Program
 ## Lesson 2: Exchange Rate API Integration - Best Practices
 
