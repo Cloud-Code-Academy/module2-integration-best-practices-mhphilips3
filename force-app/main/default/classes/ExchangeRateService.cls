@@ -43,7 +43,7 @@ public class ExchangeRateService {
         
         List<Exchange_Rate__c> exRateList = rateData.toExchangeRates();
 
-        // ONLY PERFORM DML DURING A TEST
+        // ONLY PERFORM DML DURING A TEST, else leave DML to the 
         if(Test.isRunningTest()){
             upsert exRateList External_Id__c;
         }
