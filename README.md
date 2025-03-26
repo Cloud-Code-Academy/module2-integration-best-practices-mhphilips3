@@ -19,6 +19,12 @@ I found out (amazingly, through my Integration Log) that my scheduled job was fi
    - Includes an if-else block in the Queueable class that routes the code either to the dynamic path or hardcoded path depending on if this is coming from the scheduled job or test class.
    - Includes a conditional in the ExchangeRateService class to either perform the DML (if it this is in the Test context) or not, if this is from schedulable.
 
+## 6. Work to Reduce/Eliminate warnings (PMD Best Practices)
+Have done a number of things to reduce the PMD warnings received in GitHub's automation
+   - First, I've told GitHub to ignore the three errors related to using snake case rather than camel case for the Wrapper property variables, as this is an unavoidable reality in deserializing straight to the Wrapper class.
+   - Added a Finalizer to the queueable to follow best practices.  I don't think this was necessary and all that is in the class is logging an unknown/unhandled error if nothing logs within the execute method.
+   - 
+
 
 # Cloud Code Academy - Integration Developer Program
 ## Lesson 2: Exchange Rate API Integration - Best Practices

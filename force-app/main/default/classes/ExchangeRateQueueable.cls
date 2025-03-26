@@ -16,6 +16,10 @@ public with sharing class ExchangeRateQueueable implements Queueable, Database.A
     // execute method for queueable
     public void execute(QueueableContext context){
 
+        // Instantiate finalizer 
+        Finalizer f = new Finalizer();
+        System.attachFinalizer(f);
+
         // Initialize integration log for tracking callout results
         Integration_Log__c logEntry = new Integration_Log__c();
         logEntry.Integration_Name__c = 'ExchangeRateAPI';
@@ -88,5 +92,28 @@ public with sharing class ExchangeRateQueueable implements Queueable, Database.A
         }
 
         insert logEntry;
+        f.hasLogged = true; // Mark that a log has been created (for Finalizer logic)
+    }
+
+    /**
+     * Finalizer method to wrap up queuable with best practices.  This should log
+     * an error if nothing has logged from the execute method
+     */
+
+    public with sharing class Finalizer implements System.Finalizer{
+        public Boolean hasLogged = false;
+
+        public void execute(System.FinalizerContext fc){
+
+            if(!hasLogged){
+                Integration_Log__c failLog = new Integration_Log__c();
+                failLog.Integration_Name__c = 'ExchangeRateAPI';
+                failLog.Run_Timestamp__c = Datetime.now();
+                failLog.Status__c = 'Error';
+                failLog.Message__c = 'Finalizer ran but nothing was logged during execute(), so something went wrong before the main logic finished.  Possible causes: a limit error, timeout, or the job got killed. No success or error message was recorded, so check this one as a fallback.';
+
+                insert failLog;    
+            }
+        }
     }
 }
