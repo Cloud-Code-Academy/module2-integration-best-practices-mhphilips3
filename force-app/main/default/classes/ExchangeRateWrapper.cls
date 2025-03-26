@@ -22,10 +22,11 @@ public class ExchangeRateWrapper {
         // 1. Create a list to hold the Exchange_Rate__c records
         List<Exchange_Rate__c> exRateList = new List<Exchange_Rate__c>();
 
-        // convert the UNIX timestamp to Apex Datetime data type.
+        // Convert UNIX timestamp to Apex Datetime
         Datetime lastUpdate = Datetime.newInstance(Long.valueOf(time_last_update_unix)*1000);
 
-        // 2. Iterate through the rates map and create Exchange_Rate__c records
+        // 2. Iterate through the rates map
+        // 3. For each rate, create an Exchange_Rate__c record
         for (String targetCurrency : conversion_rates.keySet()){
             Exchange_Rate__c newExRate = new Exchange_Rate__c();
             newExRate.Base_Currency__c = base_code;

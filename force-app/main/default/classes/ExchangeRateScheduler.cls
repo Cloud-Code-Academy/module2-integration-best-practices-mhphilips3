@@ -2,7 +2,7 @@
  * @description Scheduler class to run the exchange rate update on a schedule
  * Scheduling should be done in Salesforce Setup Apex Classes -> Schedule Apex
  */
-global class ExchangeRateScheduler implements Schedulable{
+global with sharing class ExchangeRateScheduler implements Schedulable{
     
     /**
      * @description Executes the scheduled job to update exchange rates
@@ -10,7 +10,8 @@ global class ExchangeRateScheduler implements Schedulable{
      */
     global void execute(SchedulableContext sc) {
         // TODO: Implement the method to update exchange rates
-        System.enqueueJob(new ExchangeRateQueueable());
+        List<Base_Currency_Config__mdt> configs = [SELECT Base_Currency__c FROM Base_Currency_Config__mdt];
+            System.enqueueJob(new ExchangeRateQueueable(configs));        
     }
 
     /**

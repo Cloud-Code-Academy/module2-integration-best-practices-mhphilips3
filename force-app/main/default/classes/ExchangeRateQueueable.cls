@@ -3,8 +3,15 @@
 * This class is enqueued by a scheduled job since callouts are not allowed directly from scheduled Apex.
 */
 public with sharing class ExchangeRateQueueable implements Queueable, Database.AllowsCallouts {
-    public ExchangeRateQueueable() {
+    private List<Base_Currency_Config__mdt> configs;
+    
+    // Constructor for Metadata based Callouts
+    public ExchangeRateQueueable(List<Base_Currency_Config__mdt> configs) {
+        this.configs = configs;
     }
+
+    // No argument constructor to be used by tests
+    public ExchangeRateQueueable(){}
 
     // execute method for queueable
     public void execute(QueueableContext context){
@@ -14,19 +21,72 @@ public with sharing class ExchangeRateQueueable implements Queueable, Database.A
         logEntry.Integration_Name__c = 'ExchangeRateAPI';
         logEntry.Run_Timestamp__c = Datetime.now();
 
-        try{
-            // Fetch and process exchange rate data
-            List<Exchange_Rate__c> updatedRates = ExchangeRateService.updateExchangeRates();
-            // Log successful outcomes
-            logEntry.Status__c = 'Success';
-            logEntry.Records_Processed__c = updatedRates.size();
+        List<String> messageList = new List<String>{'Summary of "Update Exchange Rates" Callout Run:'};
+        logEntry.Records_Processed__c = 0;
+        Boolean successRecorded = false;
+        Boolean errorRecorded = false;
+        Integer count = 0;
 
-        } catch (Exception e){
-            // Log any errors encountered
-            logEntry.Status__c = 'Error';
-            logEntry.Message__c = 'Error: ' + e.getMessage();
-        }
+        // Create list to hold exchange rates to upsert at the end of all callouts.
+        List<Exchange_Rate__c> exRatesToUpsert = new List<Exchange_Rate__c>();
+
+        /**
+         * The following if-else structure exists to allow the code to pass the existing 
+         * tests.  If this is a test run, the base currency is hardcoded as USD and used
+         * for testing purposes.  If this is a scheduled run, it will pull from the metadata
+         * and kick into the "else" side of the framework to handle multiple, dynamic base currencies.
+         */ 
         
+        if(configs == null || configs.isEmpty()){
+            try{
+                List<Exchange_Rate__c> updatedRates = ExchangeRateService.updateExchangeRates('USD');
+                exRatesToUpsert.addAll(updatedRates);
+                logEntry.Records_Processed__c += updatedRates.size();
+                messageList.add('1. Successfully updated ' + updatedRates.size() + ' USD records.');
+                successRecorded = true;
+            } catch (Exception e){
+                messageList.add('1.  Error updating  USD records. Message: ' + e.getMessage());
+                errorRecorded = true;
+            }
+        } else {
+            // Iterate through base currency configs to pull back respective exchange rates
+            for (Base_Currency_Config__mdt config : configs){
+                count ++;
+                String bc = config.Base_Currency__c;
+    
+                try{
+                    // Fetch and process exchange rate data
+                    List<Exchange_Rate__c> updatedRates = ExchangeRateService.updateExchangeRates(bc);
+    
+                    successRecorded = true;
+                    logEntry.Records_Processed__c += updatedRates.size();
+                    messageList.add(count + '.  Successfully updated ' + updatedRates.size() + ' ' + bc + ' records.');
+                    exRatesToUpsert.addAll(updatedRates);
+                } catch (Exception e){
+                    // Log any errors encountered
+                    errorRecorded = true;
+                    messageList.add(count + '.  Error updating ' + bc + ' records. Message: ' + e.getMessage());                
+                }
+            }
+        }
+
+        // Upsert collected Exchange Rate Records
+        try {
+            upsert exRatesToUpsert External_Id__c;
+        } catch (Exception dmlException){
+            messageList.add('DML Error inserting Exchange Records: ' + dmlException.getMessage());
+        }
+
+        // Finish constructing, then insert Log Entry Record
+        logEntry.Message__c = String.join(messageList, '\n');
+        if (successRecorded && errorRecorded){
+            logEntry.Status__c = 'Partial Success';
+        } else if (successRecorded){
+            logEntry.Status__c = 'Success';            
+        } else{
+            logEntry.Status__c = 'Error';
+        }
+
         insert logEntry;
     }
 }

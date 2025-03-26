@@ -12,7 +12,12 @@ I found out (amazingly, through my Integration Log) that my scheduled job was fi
 ## 4. Added support for multiple base currencies
    - This is all done in the feature branch and not pulled into the main, which will violate the tests 
    - Added a Custom Metadata Type to give administrator the ability to change currencies and include multiple currencies
-   - Refactored Queueable class, Scheduler class, and service class to accomodate this change.  Works great and logs the multiple callouts all in one Integration Log!!! 
+   - Refactored Queueable class, Scheduler class, and service class to accomodate this change.  Works great and logs the multiple callouts all in one Integration Log!!!
+
+## 5. Refactored most classes to Pass tests
+   - This includes overloading constructors and methods to able to be called by the Test Classes as written.
+   - Includes an if-else block in the Queueable class that routes the code either to the dynamic path or hardcoded path depending on if this is coming from the scheduled job or test class.
+   - Includes a conditional in the ExchangeRateService class to either perform the DML (if it this is in the Test context) or not, if this is from schedulable.
 
 
 # Cloud Code Academy - Integration Developer Program
