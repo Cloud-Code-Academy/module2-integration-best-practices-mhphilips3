@@ -7,7 +7,7 @@ public class ExchangeRateService {
     // The named credential to use for the callout
     private static final String NAMED_CREDENTIAL = 'ExchangeRate_API';    
     // The base currency to use for exchange rates
-    //private static final String BASE_CURRENCY = 'USD';
+    private static final String BASE_CURRENCY = 'USD';
 
     /**
      * @description Makes a callout to the Exchange Rate API to get the latest exchange rates
@@ -43,6 +43,12 @@ public class ExchangeRateService {
         }
         
         List<Exchange_Rate__c> exRateList = rateData.toExchangeRates();
+
+        // ONLY PERFORM DML DURING A TEST
+        if(Test.isRunningTest()){
+            upsert exRateList External_Id__c;
+        }
+        
         return exRateList;
     }
     
@@ -58,5 +64,19 @@ public class ExchangeRateService {
         List<Exchange_Rate__c> exRateList = processRates(rateData);
         // 3. Return the processed records        
         return exRateList;
+    }
+
+    /**
+     * THE FOLLOWING METHODS ARE USED ONLY FOR TESTING PURPOSES
+     * Converts no argument to use the upgraded code 
+     * @return ExchangeRateWrapper containing the response data
+     */
+    public static List<Exchange_Rate__c> updateExchangeRates(){
+        return updateExchangeRates(BASE_CURRENCY);
+    }
+
+    public static ExchangeRateWrapper getLatestRates() {
+        return getLatestRates(BASE_CURRENCY);
+        
     }
 }
