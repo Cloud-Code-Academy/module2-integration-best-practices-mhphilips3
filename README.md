@@ -27,6 +27,7 @@ Have done a number of things to reduce the PMD warnings received in GitHub's aut
    - To handle the complexity warnings in the Queueable's execute method:
       - Broke out parts of the queueable to keep the execute method simpler (PMD was complaining it was too complex).
       - Added a ProcessingResult wrapper to keep everything in one place — list of rates, messages, log record, etc.
+   - Added a limit to the SOQL query that fetches metadata records to address PMD's warning about queries without limits.  This is good here anyway, as there is a limit to number of Queueable Jobs per transaction.  For the purpose of this developer org (which can be limited in storage), I arbitrarily set that for 5.
 
 
 

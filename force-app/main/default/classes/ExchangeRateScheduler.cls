@@ -10,7 +10,9 @@ global with sharing class ExchangeRateScheduler implements Schedulable{
      */
     global void execute(SchedulableContext sc) {
         // TODO: Implement the method to update exchange rates
-        List<Base_Currency_Config__mdt> configs = [SELECT Base_Currency__c FROM Base_Currency_Config__mdt];
+        List<Base_Currency_Config__mdt> configs = [SELECT Base_Currency__c
+                                                    FROM Base_Currency_Config__mdt
+                                                    LIMIT 5];
             System.enqueueJob(new ExchangeRateQueueable(configs));        
     }
 
