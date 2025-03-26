@@ -17,6 +17,26 @@ public with sharing class ExchangeRateQueueable implements Queueable, Database.A
         this.configs = null;
     }
 
+    /**
+    * @description Tracks all runtime results during execution:
+    * - collected exchange rate records
+    * - log messages
+    * - success/error flags
+    * - the Integration Log record to insert at the end
+    */    
+    private class ProcessingResult {
+        public List<Exchange_Rate__c> exRatesToUpsert = new List<Exchange_Rate__c>();
+        public List<String> messageList = new List<String>{'Summary of "Update Exchange Rates" Callout Run:'};
+        public Boolean successRecorded = false;
+        public Boolean errorRecorded = false;
+
+        public Integration_Log__c logEntry = new Integration_Log__c(
+            Integration_Name__c = 'ExchangeRateAPI',
+            Run_Timestamp__c = Datetime.now(),
+            Records_Processed__c = 0
+        );
+    }
+
     // execute method for queueable
     public void execute(QueueableContext context){
 
@@ -24,79 +44,81 @@ public with sharing class ExchangeRateQueueable implements Queueable, Database.A
         Finalizer f = new Finalizer();
         System.attachFinalizer(f);
 
-        // Initialize integration log for tracking callout results
-        Integration_Log__c logEntry = new Integration_Log__c();
-        logEntry.Integration_Name__c = 'ExchangeRateAPI';
-        logEntry.Run_Timestamp__c = Datetime.now();
-
-        List<String> messageList = new List<String>{'Summary of "Update Exchange Rates" Callout Run:'};
-        logEntry.Records_Processed__c = 0;
-        Boolean successRecorded = false;
-        Boolean errorRecorded = false;
+        // Instantiate ProcessResult wrapper to help facilitate processing
+        ProcessingResult result = new ProcessingResult();
         Integer count = 0;
 
-        // Create list to hold exchange rates to upsert at the end of all callouts.
-        List<Exchange_Rate__c> exRatesToUpsert = new List<Exchange_Rate__c>();
-
-        /**
-         * The following if-else structure exists to allow the code to pass the existing 
-         * tests.  If this is a test run, the base currency is hardcoded as USD and used
-         * for testing purposes.  If this is a scheduled run, it will pull from the metadata
-         * and kick into the "else" side of the framework to handle multiple, dynamic base currencies.
-         */ 
-        
+        // Essentially decides if this is a test scenario (no configs: if-block) or the production scenario (configs exist: else-block)
         if(configs == null || configs.isEmpty()){
-            try{
-                List<Exchange_Rate__c> updatedRates = ExchangeRateService.updateExchangeRates('USD');
-                exRatesToUpsert.addAll(updatedRates);
-                logEntry.Records_Processed__c += updatedRates.size();
-                messageList.add('1. Successfully updated ' + updatedRates.size() + ' USD records.');
-                successRecorded = true;
-            } catch (Exception e){
-                messageList.add('1.  Error updating  USD records. Message: ' + e.getMessage());
-                errorRecorded = true;
-            }
+            count++;
+            // Hard code USD for test scenario, 1 callout max
+            handleSingleCurrency('USD', count, result);
         } else {
-            // Iterate through base currency configs to pull back respective exchange rates
             for (Base_Currency_Config__mdt config : configs){
                 count ++;
-                String bc = config.Base_Currency__c;
-    
-                try{
-                    // Fetch and process exchange rate data
-                    List<Exchange_Rate__c> updatedRates = ExchangeRateService.updateExchangeRates(bc);
-    
-                    successRecorded = true;
-                    logEntry.Records_Processed__c += updatedRates.size();
-                    messageList.add(count + '.  Successfully updated ' + updatedRates.size() + ' ' + bc + ' records.');
-                    exRatesToUpsert.addAll(updatedRates);
-                } catch (Exception e){
-                    // Log any errors encountered
-                    errorRecorded = true;
-                    messageList.add(count + '.  Error updating ' + bc + ' records. Message: ' + e.getMessage());                
-                }
+                // Pass in mdt to dynamically establish base currencies for exchange rates
+                handleSingleCurrency(config.Base_Currency__c, count, result);
             }
         }
-
+        
+        upsertExchangeRates(result); // Outsource to Upsert created Exchange Rate Records
+        
+        logResults(result); // Outsource to log results of Integration Run
+        
+        f.hasLogged = true; // Mark that a log has been created (for Finalizer logic)
+    }
+    
+    /**
+    * @description Fetches exchange rates for a single base currency and updates the result wrapper.
+    * Adds records to the upsert list, appends log messages, and flags success or error.
+    * This helps reduce complexity in the main execute() method.
+    */
+    public void handleSingleCurrency(String baseCurrency, Integer count, ProcessingResult result){
+        
+        try{
+            List<Exchange_Rate__c> updatedRates = ExchangeRateService.updateExchangeRates(baseCurrency);
+            result.exRatesToUpsert.addAll(updatedRates);
+            result.logEntry.Records_Processed__c += updatedRates.size();
+            result.messageList.add(count + '. Successfully updated ' + updatedRates.size() + ' ' + baseCurrency + 'records.');
+            result.successRecorded = true;
+        } catch (Exception e){
+            result.messageList.add(count + '.  Error updating  ' + baseCurrency + ' records. Message: ' + e.getMessage());
+            result.errorRecorded = true;
+        }
+    }
+    
+    /**
+    * @description Performs a single upsert for all collected exchange rate records.
+    * If a DML error occurs, adds the error message to the result for later logging.
+    */
+    private void upsertExchangeRates(ProcessingResult result){
+        
         // Upsert collected Exchange Rate Records
         try {
-            upsert exRatesToUpsert External_Id__c;
+            upsert result.exRatesToUpsert External_Id__c;
         } catch (Exception dmlException){
-            messageList.add('DML Error inserting Exchange Records: ' + dmlException.getMessage());
+            result.messageList.add('DML Error inserting Exchange Records: ' + dmlException.getMessage());
         }
+    }
+    
+    /**
+    * @description Finalizes and inserts the Integration Log entry.
+    * Determines the appropriate status (Success, Partial, or Error) based on the processing outcome.
+    */
+    private void logResults(ProcessingResult result){
 
         // Finish constructing, then insert Log Entry Record
-        logEntry.Message__c = String.join(messageList, '\n');
-        if (successRecorded && errorRecorded){
-            logEntry.Status__c = 'Partial Success';
-        } else if (successRecorded){
-            logEntry.Status__c = 'Success';            
-        } else{
-            logEntry.Status__c = 'Error';
-        }
+        result.logEntry.Message__c = String.join(result.messageList, '\n');
 
-        insert logEntry;
-        f.hasLogged = true; // Mark that a log has been created (for Finalizer logic)
+        if (result.successRecorded && result.errorRecorded){
+            result.logEntry.Status__c = 'Partial Success';
+        } else if (result.successRecorded){
+            result.logEntry.Status__c = 'Success';            
+        } else{
+            result.logEntry.Status__c = 'Error';
+        }
+        
+        insert result.logEntry;
     }
 
     /**

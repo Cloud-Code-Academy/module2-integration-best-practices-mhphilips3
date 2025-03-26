@@ -23,7 +23,11 @@ I found out (amazingly, through my Integration Log) that my scheduled job was fi
 Have done a number of things to reduce the PMD warnings received in GitHub's automation
    - First, I've told GitHub to ignore the three errors related to using snake case rather than camel case for the Wrapper property variables, as this is an unavoidable reality in deserializing straight to the Wrapper class.
    - Added a Finalizer to the queueable to follow best practices.  I don't think this was necessary and all that is in the class is logging an unknown/unhandled error if nothing logs within the execute method.
-   - 
+   - Added redundant property instantiation to avoid PMD warning.
+   - To handle the complexity warnings in the Queueable's execute method:
+      - Broke out parts of the queueable to keep the execute method simpler (PMD was complaining it was too complex).
+      - Added a ProcessingResult wrapper to keep everything in one place — list of rates, messages, log record, etc.
+
 
 
 # Cloud Code Academy - Integration Developer Program
